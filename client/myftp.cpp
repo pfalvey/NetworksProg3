@@ -8,8 +8,8 @@
 #include <unistd.h>
 #define SERVER_PORT 41700
 #define MAX_LINE 256
-    int
-main(int argc, char * argv[])
+    
+int main(int argc, char * argv[])
 {
     FILE *fp;
     struct hostent *hp;
