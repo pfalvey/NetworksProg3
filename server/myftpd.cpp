@@ -6,12 +6,21 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
-#define SERVER_PORT 41700
+#include <iostream>
 #define MAX_PENDING 5
 #define MAX_LINE 256
     
-int main()
+int main(int argc, char * argv[])
 {
+    int SERVER_PORT;
+    /* get port number from cmd line arguments */
+    if (argc == 2){
+        SERVER_PORT = atoi(argv[1]);
+    }
+    else {
+        std::cout<<"Usage: ./myftpd [PORT NUMBER]\n";
+        exit(1);
+    }
     struct sockaddr_in sin;
     char buf[MAX_LINE];
     socklen_t len;

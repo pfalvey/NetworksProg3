@@ -6,11 +6,12 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
-#define SERVER_PORT 41700
+#include <iostream>
 #define MAX_LINE 256
     
 int main(int argc, char * argv[])
 {
+    int SERVER_PORT;
     FILE *fp;
     struct hostent *hp;
     struct sockaddr_in sin;
@@ -18,13 +19,14 @@ int main(int argc, char * argv[])
     char buf[MAX_LINE];
     int s;
     int len;
-    if (argc==2) 
+    if (argc==3) 
     {
         host = argv[1];
+        SERVER_PORT = atoi(argv[2]);
     }
     else 
     {
-        fprintf(stderr, "usage: simplex-talk host\n");
+        fprintf(stderr, "usage: ./myftp [SERVER NAME] [PORT]\n");
         exit(1);
     }
 
