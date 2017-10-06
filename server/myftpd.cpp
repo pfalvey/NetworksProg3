@@ -14,7 +14,7 @@ int main()
 {
     struct sockaddr_in sin;
     char buf[MAX_LINE];
-    int len;
+    socklen_t len;
     int s, new_s;
     /* build address data structure */
     bzero((char *)&sin, sizeof(sin));
@@ -28,6 +28,7 @@ int main()
         exit(1);
     }
     // set socket option
+    int opt = 1;
     if ((setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)& opt, sizeof(int)))<0)
     {
         perror ("simplex-talk:setscokt");
