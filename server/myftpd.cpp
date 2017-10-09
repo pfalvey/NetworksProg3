@@ -17,7 +17,7 @@
     
 std::string get_permissions(std::string file);
 std::string dir_list();
-void deleteFile(int s, char * buf);
+void deleteFile(int s, std::string buf);
 
 int main(int argc, char * argv[])
 {
@@ -73,7 +73,8 @@ int main(int argc, char * argv[])
 		}
 
         while (1)
-		{
+		{   
+            bzero((char *)&buf, sizeof(buf));
             if((len=recv(new_s, buf, sizeof(buf), 0))==-1)
 	    	{
                 perror("Server Received Error!");
@@ -99,9 +100,11 @@ int main(int argc, char * argv[])
 				}
 			}
             else if (strcmp(tok, "DELF") == 0){
-                deleteFile(new_s, buf);
+                std::cout<<"\n";
+                deleteFile(new_s, temp);
 
             }
+            bzero((char *)&buf, sizeof(buf));
 		}
         printf("Client finishes, close the connection!\n");
         close(new_s);
@@ -168,6 +171,81 @@ std::string get_permissions(std::string file)
 
 }
 
-void deleteFile(int s, char * buf){
-    
+void deleteFile(int s, std::string buf){
+    std::stringstream ss;
+    ss << buf;
+    std::string command;
+    std::string size;
+    std::string file;
+    ss >> command;
+    ss >> size;
+    ss >> file;
+
+    DIR *dir;
+	struct dirent *ent;
+	//open the directory and check for matching file
+	if((dir = opendir(".")) != NULL)
+	{
+        int exists = -1;
+		while((ent = readdir(dir)) != NULL)
+		{
+			if(file.compare(ent->d_name) == 0){
+                exists = 1;
+            }
+		}
+        std::string result = "-1";
+        if (exists == 1){
+            result = "1";
+        }
+        char buffer[BUFSIZ];
+        bzero((char *)&buffer, sizeof(buffer));
+        result.copy(buffer, BUFSIZ);
+        int bufferLen = strlen(buffer) + 1;
+        buffer[bufferLen - 1] = '\0';
+        if (send(s, buffer, bufferLen, 0) == -1){
+            perror ("Server send error!\n");
+            exit(1);
+        }
+        if (result.compare("1") == 0){
+            char mesg[BUFSIZ];
+            bzero((char *)&mesg, sizeof(mesg));
+            if (recv(s, mesg, sizeof(mesg), 0) == -1){
+                perror("Error receiving message from client\n");
+                exit(1);
+            }
+            else {
+                if (strcmp(mesg, "Yes") == 0){
+                //delete file
+                    if (remove(file.c_str()) != 0){
+                        char last[BUFSIZ] = "Unable to remove file\n\0";
+                        int lastLen = strlen(last) + 1;
+                        if (send(s, last, lastLen, 0) == -1){
+                            perror ("Server send error!\n");
+                            exit(1);
+                        } 
+                    } else {
+                        char last[BUFSIZ] = "File successfully removed\n\0";
+                        int lastLen = strlen(last) + 1;
+                        if (send(s, last, lastLen, 0) == -1){
+                            perror ("Server send error!\n");
+                            exit(1);
+                        }
+                    }
+                }
+            }
+        }
+		closedir(dir);
+        /*char last[BUFSIZ] = "\0";
+        int lastLen = 1;
+        if (send(s, last, lastLen, 0) == -1){
+            perror("Server send error!\n");
+            exit(1);
+        }
+        std::cout<<"Truuuuuuu\n";*/
+	}
+	else
+	{
+		perror("error openning directory");
+	}
+
 }

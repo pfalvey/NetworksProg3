@@ -69,14 +69,14 @@ int main(int argc, char * argv[])
     {
         //display menu
         buf[MAX_LINE-1] = '\0';
-
         if (!strncmp(buf, "Exit",4))
 	    {
             printf("Good Bye!\n");
             break;
 	    }
         std::string temp(buf);
-        if (!strncmp(buf, "DELF test.txt", 13))
+        char * tok = strtok(buf, " ");
+        if (!strncmp(tok, "DELF", 4))
         {
             delf(temp, s, sin);
             continue;
@@ -86,22 +86,34 @@ int main(int argc, char * argv[])
         if(send(s, buf, len, 0)==-1)
 	    {
             perror("client send error!"); exit(1);
+        }
+        if(!strncmp(tok, "LIST", 4)){
+            //wait for server response
+            if(recv(s, buf, sizeof(buf), 0) == -1)
+            {
+                perror("Error receiving data from server");
+            }
+            else
+            {
+                std::cout << buf << std::endl;
+            }
+        }
 
-	}
-
-	bzero(buf, sizeof(buf));
 	
+
+        bzero((char *)&buf, sizeof(buf));
 	//wait for server response
-	if(recv(s, buf, sizeof(buf), 0) == -1)
+	/*if(recv(s, buf, sizeof(buf), 0) == -1)
 	{
 		perror("Error receiving data from server");
 	}
 	else
 	{
 		std::cout << buf << std::endl;
-	}
+	}*/
 
 	
+        bzero((char *)&buf, sizeof(buf));
 
     }
     close(s);
@@ -109,17 +121,20 @@ int main(int argc, char * argv[])
 
 
 void delf(std::string command, int s, struct sockaddr_in sin){
+    
     std::stringstream ss;
     ss.str(command);
     std::string delf;
     std::string length;
     std::string fileName;
-
+    
     ss >> delf;
     ss >> fileName;
     length = std::to_string(fileName.size());
     std::string message = delf + " " + length + " " +fileName;
+
     char temp[BUFSIZ];
+    bzero((char *)&temp, sizeof(temp));
     message.copy(temp, BUFSIZ);
 
     //const char * temp = message.c_str();
@@ -130,28 +145,43 @@ void delf(std::string command, int s, struct sockaddr_in sin){
             perror ("Client Send Error!\n");
             exit(1);
         }
-    /*int len = strlen(command.c_str());
-    std::string length = std::to_string(len);
-    length.append("\n");
-    length.append("\0");
-    const char *temp = length.c_str();
-    int tempLen = strlen(temp) + 1;
-    if(send(s, temp, tempLen, 0) == -1)
-        {
-            perror ("Client Send Error!\n");
-            exit(1);
+    char buf[BUFSIZ];
+    bzero((char *)&buf, sizeof(buf));
+    if(recv(s, buf, sizeof(buf), 0) == -1)
+	{
+		perror("Error receiving data from server\n");
+	}
+    if (strcmp(buf, "1") == 0){
+        std::cout<<"Are you sure you want to delete the file " <<fileName<<"?\nEnter \"Yes\" to delete or \"No\" to ignore:";
+        std::string result;
+        std::cin >> result;
+        if (result.compare("Yes") == 0){
+            char confirm[BUFSIZ] = "Yes\0";
+            int conLen = 4;
+            if(send(s, confirm, conLen, 0) == -1){
+                perror("client send error!\n");
+                exit(1);
+            }
+            bzero((char *)&confirm, sizeof(confirm));
+            if (recv(s, confirm, sizeof(confirm), 0) == -1){
+                perror("Error receiving data from server\n");
+            }
+            else {
+                std::cout<<confirm<<std::endl;
+            }
         }
-    command.append("\n");
-    length.append("\0");
-    const char *buf = command.c_str();
-    len = strlen(buf) + 1;
-    //std::cout<<len<<" "<<buf<<std::endl;
-    if(send(s, buf, len, 0) == -1)
-        {
-            perror ("Client Send Error!\n");
-            exit(1);
+        else {
+            std::cout<<"Delete abandoned by the user!\n";
+            char confirm[BUFSIZ] = "No\0";
+            int conLen = 3;
+            if(send(s, confirm, conLen, 0) == -1){
+                perror("client send error!\n");
+                exit(1);
+            }
         }
+    }
+    else {
+        std::cout<<"The file does not exist on server\n";
+    }
     
-    */
-
 }
