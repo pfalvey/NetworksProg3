@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <dirent.h>
 #include <algorithm>
 #define MAX_PENDING 5
@@ -16,6 +17,7 @@
     
 std::string get_permissions(std::string file);
 std::string dir_list();
+void deleteFile(int s, char * buf);
 
 int main(int argc, char * argv[])
 {
@@ -79,11 +81,14 @@ int main(int argc, char * argv[])
 	    	}
             if (len==0) break;
             printf("TCP Server Received: %s", buf);
+
 			std::string temp = buf;
 			temp.erase(std::remove(temp.begin(), temp.end(), '\n'), temp.end());
 			//std::cout << temp.compare("LIST") << std::endl;
 			//if(strcmp(buf, "LIST"))
+      //char * tok = strtok(buf, " ");
 			if(temp == "LIST")			
+
 			{
 				std::cout << "Compare good" << std::endl;
 				std::string response = dir_list();
@@ -93,6 +98,10 @@ int main(int argc, char * argv[])
 					exit(1);
 				}
 			}
+            else if (strcmp(tok, "DELF") == 0){
+                deleteFile(new_s, buf);
+
+            }
 		}
         printf("Client finishes, close the connection!\n");
         close(new_s);
@@ -157,4 +166,8 @@ std::string get_permissions(std::string file)
 		std::cout << "Error getting permissions for file " << file << std::endl;
 	}		
 
+}
+
+void deleteFile(int s, char * buf){
+    
 }
