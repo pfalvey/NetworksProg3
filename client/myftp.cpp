@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
+#include <sstream>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -8,7 +10,10 @@
 #include <unistd.h>
 #include <iostream>
 #define MAX_LINE 256
-    
+
+
+void delf(std::string command, int s, struct sockaddr_in sin);
+
 int main(int argc, char * argv[])
 {
     int SERVER_PORT;
@@ -64,17 +69,24 @@ int main(int argc, char * argv[])
     {
         //display menu
         buf[MAX_LINE-1] = '\0';
-    	if (!strncmp(buf, "Exit",4))
-	{
-	    	//switch on input type
-        	printf("Good Bye!\n");
-        	break;
-	}
+
+        if (!strncmp(buf, "Exit",4))
+	    {
+            printf("Good Bye!\n");
+            break;
+	    }
+        std::string temp(buf);
+        if (!strncmp(buf, "DELF test.txt", 13))
+        {
+            delf(temp, s, sin);
+            continue;
+        }
 
         len = strlen(buf) + 1;
         if(send(s, buf, len, 0)==-1)
-	{
+	    {
             perror("client send error!"); exit(1);
+
 	}
 
 	bzero(buf, sizeof(buf));
@@ -88,7 +100,56 @@ int main(int argc, char * argv[])
 	std::cout << buf << std::endl;
 
 	
+
     }
     close(s);
 }
 
+
+void delf(std::string command, int s, struct sockaddr_in sin){
+    std::stringstream ss;
+    ss.str(command);
+    std::string delf;
+    std::string length;
+    std::string fileName;
+
+    ss >> delf;
+    ss >> fileName;
+    length = std::to_string(fileName.size());
+    std::string message = delf + " " + length + " " +fileName;
+    char temp[BUFSIZ];
+    message.copy(temp, BUFSIZ);
+
+    //const char * temp = message.c_str();
+    int tempLen = strlen(temp) + 1;
+    temp[tempLen-1] = '\0';
+    if(send(s, temp, tempLen, 0) == -1)
+        {
+            perror ("Client Send Error!\n");
+            exit(1);
+        }
+    /*int len = strlen(command.c_str());
+    std::string length = std::to_string(len);
+    length.append("\n");
+    length.append("\0");
+    const char *temp = length.c_str();
+    int tempLen = strlen(temp) + 1;
+    if(send(s, temp, tempLen, 0) == -1)
+        {
+            perror ("Client Send Error!\n");
+            exit(1);
+        }
+    command.append("\n");
+    length.append("\0");
+    const char *buf = command.c_str();
+    len = strlen(buf) + 1;
+    //std::cout<<len<<" "<<buf<<std::endl;
+    if(send(s, buf, len, 0) == -1)
+        {
+            perror ("Client Send Error!\n");
+            exit(1);
+        }
+    
+    */
+
+}
