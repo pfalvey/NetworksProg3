@@ -19,6 +19,7 @@ int main(int argc, char * argv[])
     char buf[MAX_LINE];
     int s;
     int len;
+    std::string response;
     if (argc==3) 
     {
         host = argv[1];
@@ -49,7 +50,8 @@ int main(int argc, char * argv[])
         perror("simplex-talk: socket"); exit(1);
     }
     
-    printf("Welcome to your first TCP client! To quit, type \'Exit\'\n");
+    printf("Welcome to the TCP client! To quit, type \'Exit\'\n");
+    //add menu funtionality here
 
     if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) < 0)
     {
@@ -60,11 +62,13 @@ int main(int argc, char * argv[])
     /* main loop: get and send lines of text */
     while (fgets(buf, sizeof(buf), stdin)) 
     {
+        //display menu
         buf[MAX_LINE-1] = '\0';
-        if (!strncmp(buf, "Exit",4))
+    	if (!strncmp(buf, "Exit",4))
 	{
-            printf("Good Bye!\n");
-            break;
+	    	//switch on input type
+        	printf("Good Bye!\n");
+        	break;
 	}
 
         len = strlen(buf) + 1;
@@ -72,6 +76,18 @@ int main(int argc, char * argv[])
 	{
             perror("client send error!"); exit(1);
 	}
+
+	bzero(buf, sizeof(buf));
+	
+	//wait for server response
+	if(recv(s, buf, sizeof(buf), 0) == -1)
+	{
+		perror("Error receiving data from server");
+	}
+
+	std::cout << buf << std::endl;
+
+	
     }
     close(s);
 }
