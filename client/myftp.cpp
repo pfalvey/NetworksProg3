@@ -84,8 +84,10 @@ int main(int argc, char * argv[])
 	{
 		perror("Error receiving data from server");
 	}
-
-	std::cout << buf << std::endl;
+	else
+	{
+		std::cout << buf << std::endl;
+	}
 
 	
     }
