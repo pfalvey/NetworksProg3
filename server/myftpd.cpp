@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <dirent.h>
+#include <algorithm>
 #define MAX_PENDING 5
 #define MAX_LINE 256
     
@@ -80,11 +81,17 @@ int main(int argc, char * argv[])
 	    	}
             if (len==0) break;
             printf("TCP Server Received: %s", buf);
-            char * tok = strtok(buf, " ");
-			if(strcmp(buf, "LIST"))
+
+			std::string temp = buf;
+			temp.erase(std::remove(temp.begin(), temp.end(), '\n'), temp.end());
+			//std::cout << temp.compare("LIST") << std::endl;
+			//if(strcmp(buf, "LIST"))
+      //char * tok = strtok(buf, " ");
+			if(temp == "LIST")			
+
 			{
+				std::cout << "Compare good" << std::endl;
 				std::string response = dir_list();
-				std::cout << response << std::endl;
 				if(send(new_s, response.c_str(), strlen(response.c_str()), 0) == -1)
 				{
 					perror("Error sending data to client");
