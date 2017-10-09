@@ -86,7 +86,7 @@ int main(int argc, char * argv[])
 			temp.erase(std::remove(temp.begin(), temp.end(), '\n'), temp.end());
 			//std::cout << temp.compare("LIST") << std::endl;
 			//if(strcmp(buf, "LIST"))
-      //char * tok = strtok(buf, " ");
+            char * tok = strtok(buf, " ");
 			if(temp == "LIST")			
 
 			{
