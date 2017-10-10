@@ -42,6 +42,7 @@ int main(int argc, char * argv[])
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = INADDR_ANY;
     sin.sin_port = htons(SERVER_PORT);
+		std::string current_dir = ".";
     /* setup passive open */
     if ((s = socket(PF_INET, SOCK_STREAM, 0)) < 0) 
     {
@@ -68,19 +69,19 @@ int main(int argc, char * argv[])
     while(1) 
     {
         if ((new_s = accept(s, (struct sockaddr *)&sin, &len)) < 0) 
-		{
+				{
             perror("simplex-talk: accept");
             exit(1);
-		}
+				}
 
         while (1)
-		{   
+				{   
             bzero((char *)&buf, sizeof(buf));
             if((len=recv(new_s, buf, sizeof(buf), 0))==-1)
-	    	{
+	    			{
                 perror("Server Received Error!");
                 exit(1);
-	    	}
+	    			}
             if (len==0) break;
             printf("TCP Server Received: %s", buf);
 
@@ -88,11 +89,24 @@ int main(int argc, char * argv[])
 			temp.erase(std::remove(temp.begin(), temp.end(), '\n'), temp.end());
 			//std::cout << temp.compare("LIST") << std::endl;
 			//if(strcmp(buf, "LIST"))
-            char * tok = strtok(buf, " ");
-			if(temp == "LIST")			
-
+      char * tok = strtok(buf, " ");
+			std::cout << "tok is " << tok << " and temp is " << temp << std::endl;
+			if(strcmp(tok, "CDIR") == 0)
 			{
-				std::cout << "Compare good" << std::endl;
+				//scrub first 5 characters, i.e. "CDIR "
+				//all that's left is command
+				temp.erase(0, 5);
+				chdir(temp.c_str());
+				std::string response = "Working directory changed to ";
+				response += temp;
+				if(send(new_s, response.c_str(), strlen(response.c_str()), 0) == -1)
+				{
+					perror("Error sending response to client");
+					exit(1);
+				}
+			}
+			else if(temp == "LIST")			
+			{
 				std::string response = dir_list();
 				if(send(new_s, response.c_str(), strlen(response.c_str()), 0) == -1)
 				{
