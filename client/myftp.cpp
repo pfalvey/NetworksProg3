@@ -83,11 +83,11 @@ int main(int argc, char * argv[])
         }
 
         len = strlen(buf) + 1;
-        if(send(s, buf, len, 0)==-1)
+        if(send(s, temp.c_str(), strlen(temp.c_str()), 0)==-1)
 	    {
             perror("client send error!"); exit(1);
         }
-        if(!strncmp(tok, "LIST", 4)){
+        if(!strncmp(tok, "LIST", 4) || !strncmp(tok, "CDIR", 4)){
             //wait for server response
             if(recv(s, buf, sizeof(buf), 0) == -1)
             {
@@ -101,7 +101,7 @@ int main(int argc, char * argv[])
 
 	
 
-        bzero((char *)&buf, sizeof(buf));
+        //bzero((char *)&buf, sizeof(buf));
 	//wait for server response
 	/*if(recv(s, buf, sizeof(buf), 0) == -1)
 	{
@@ -118,7 +118,6 @@ int main(int argc, char * argv[])
     }
     close(s);
 }
-
 
 void delf(std::string command, int s, struct sockaddr_in sin){
     
