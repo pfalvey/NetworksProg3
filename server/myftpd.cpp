@@ -18,6 +18,7 @@
 std::string get_permissions(std::string file);
 std::string dir_list();
 void deleteFile(int s, std::string buf);
+void makeDir(int s, std::string buf);
 
 int main(int argc, char * argv[])
 {
@@ -117,6 +118,10 @@ int main(int argc, char * argv[])
                 std::cout<<"\n";
                 deleteFile(new_s, temp);
 
+            }
+            else if (strcmp(tok, "MDIR") == 0){
+                std::cout<<"\n";
+                makeDir(new_s, temp);
             }
             bzero((char *)&buf, sizeof(buf));
 		}
@@ -262,4 +267,59 @@ void deleteFile(int s, std::string buf){
 		perror("error openning directory");
 	}
 
+}
+
+void makeDir(int s, std::string buf){
+    std::stringstream ss;
+    ss << buf;
+    std::string command;
+    std::string size;
+    std::string dirName;
+    ss >> command;
+    ss >> size;
+    ss >> dirName;
+
+    DIR *dir;
+	struct dirent *ent;
+	//open the directory and check for matching file
+	if((dir = opendir(".")) != NULL)
+	{
+        int exists = 1;
+		while((ent = readdir(dir)) != NULL)
+		{
+			if(dirName.compare(ent->d_name) == 0){
+                exists = -2;
+            }
+		}
+        std::string result = "-1";
+        if (exists == 1){
+            result = "1";
+        }
+        if (exists == -2){
+            result = "-2";
+        }
+        if (exists == 1){
+        //create directory
+            if(mkdir(dirName.c_str(), 0755) == -1){
+                result = "-1";
+                perror("here");
+            }
+        }
+                
+        char buffer[BUFSIZ];
+        bzero((char *)&buffer, sizeof(buffer));
+        result.copy(buffer, BUFSIZ);
+        int bufferLen = strlen(buffer) + 1;
+        buffer[bufferLen - 1] = '\0';
+        if (send(s, buffer, bufferLen, 0) == -1){
+            perror ("Server send error!\n");
+            exit(1);
+        }
+
+		closedir(dir);
+	}
+	else
+	{
+		perror("error openning directory");
+	}
 }

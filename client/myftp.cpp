@@ -12,7 +12,8 @@
 #define MAX_LINE 256
 
 
-void delf(std::string command, int s, struct sockaddr_in sin);
+void delf(std::string command, int s);
+void makeDir(std::string command, int s);
 
 int main(int argc, char * argv[])
 {
@@ -78,7 +79,11 @@ int main(int argc, char * argv[])
         char * tok = strtok(buf, " ");
         if (!strncmp(tok, "DELF", 4))
         {
-            delf(temp, s, sin);
+            delf(temp, s);
+            continue;
+        }
+        if (!strncmp(tok, "MDIR", 4)){
+            makeDir(temp, s);
             continue;
         }
 
@@ -119,7 +124,9 @@ int main(int argc, char * argv[])
     close(s);
 }
 
-void delf(std::string command, int s, struct sockaddr_in sin){
+
+void delf(std::string command, int s){
+
     
     std::stringstream ss;
     ss.str(command);
@@ -183,4 +190,46 @@ void delf(std::string command, int s, struct sockaddr_in sin){
         std::cout<<"The file does not exist on server\n";
     }
     
+}
+
+void makeDir(std::string command, int s){
+    std::stringstream ss;
+    ss.str(command);
+    std::string mdir;
+    std::string length;
+    std::string dirName;
+    
+    ss >> mdir;
+    ss >> dirName;
+    length = std::to_string(dirName.size());
+    std::string message = mdir + " " + length + " " +dirName;
+
+    char temp[BUFSIZ];
+    bzero((char *)&temp, sizeof(temp));
+    message.copy(temp, BUFSIZ);
+
+    //const char * temp = message.c_str();
+    int tempLen = strlen(temp) + 1;
+    temp[tempLen-1] = '\0';
+    if(send(s, temp, tempLen, 0) == -1)
+        {
+            perror ("Client Send Error!\n");
+            exit(1);
+        }
+    char buf[BUFSIZ];
+    bzero((char *)&buf, sizeof(buf));
+    if(recv(s, buf, sizeof(buf), 0) == -1)
+	{
+		perror("Error receiving data from server\n");
+	}
+    if (strcmp(buf, "1") == 0){
+        std::cout<<"The directory was successfully made\n";
+    }
+    else if (strcmp(buf, "-2") == 0){
+        std::cout<<"The directory already exists on server\n";
+    }
+    else {
+        std::cout<<"Error in making directory\n";
+    }
+
 }
