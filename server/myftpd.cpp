@@ -125,7 +125,7 @@ int main(int argc, char * argv[])
             }
             bzero((char *)&buf, sizeof(buf));
 		}
-        printf("Client finishes, close the connection!\n");
+        printf("Client closed connection! Waiting for new client...\n");
         close(new_s);
     }
 }
