@@ -7,11 +7,13 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <dirent.h>
 #include <algorithm>
+#include <fstream>
 #define MAX_PENDING 5
 #define MAX_LINE 256
     
@@ -19,6 +21,7 @@ std::string get_permissions(std::string file);
 std::string dir_list();
 void deleteFile(int s, std::string buf);
 void makeDir(int s, std::string buf);
+void dwld(int s, std::string buf);
 
 int main(int argc, char * argv[])
 {
@@ -114,15 +117,19 @@ int main(int argc, char * argv[])
 					exit(1);
 				}
 			}
-            else if (strcmp(tok, "DELF") == 0){
+      else if (strcmp(tok, "DELF") == 0){
                 std::cout<<"\n";
                 deleteFile(new_s, temp);
 
-            }
-            else if (strcmp(tok, "MDIR") == 0){
-                std::cout<<"\n";
-                makeDir(new_s, temp);
-            }
+      }
+      else if (strcmp(tok, "MDIR") == 0){
+          std::cout<<"\n";
+          makeDir(new_s, temp);
+      }
+	else if(strcmp(tok, "DWLD") == 0)
+	{
+		dwld(new_s, temp);	
+	}	
             bzero((char *)&buf, sizeof(buf));
 		}
         printf("Client closed connection! Waiting for new client...\n");
@@ -187,6 +194,89 @@ std::string get_permissions(std::string file)
 	{
 		std::cout << "Error getting permissions for file " << file << std::endl;
 	}		
+
+}
+
+void dwld(int s, std::string cmd)
+{    
+	std::stringstream ss;
+    ss << cmd;
+    std::string command;
+    std::string size;
+    std::string fileName;
+    ss >> command;
+    ss >> size;
+    ss >> fileName;
+
+	char buf[MAX_LINE];
+	std::ifstream file(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
+	
+	//check if the file exists and open it
+	std::cout << "file name is >>" << fileName << "<<" << std::endl;
+	int fd = open(fileName.c_str(), O_RDONLY);
+	if(fd == -1 || !file.good())
+	{
+		std::string response = "Could not open file ";
+		response += fileName;
+		if(send(s, response.c_str(), strlen(response.c_str()), 0) == -1)
+		{
+			perror("Could not send to client");
+			return;
+		}
+	}
+
+	//send filesize to client
+	file.seekg(0, std::ios::end);
+	int fileSize = file.tellg();
+	int bytesToRead = fileSize;
+
+	if(send(s, std::to_string(fileSize).c_str(), sizeof(fileSize), 0) == -1)
+	{
+		perror("Error sending filesize");
+	}
+
+	//file is open, read a chunk and then write it to the socket
+	//this is done in a loop until the file is sent in its entirety
+
+	while(1)
+	{
+		int numRead = read(fd, buf, sizeof(buf));
+		//if we don't read anything, we are done
+		if(numRead == 0) 
+		{
+			break;
+		}
+
+		if(numRead < 0)
+		{
+			perror("Could not read from file");
+			int t = send(s, "-1", sizeof("-1"), 0);
+			return;
+		}
+
+		//make this a pointer so we can increment starting point
+		//if we have to do multiple writes
+		void *message = buf;
+		while(numRead > 0)
+		{
+			int numWritten = write(s, message, numRead);
+			if(numWritten == 0)
+			{
+				break;
+			}
+			if(numWritten <= 0)
+			{
+				perror("Could not write to socket");
+				return;
+			}
+			numRead -= numWritten;
+			message += numWritten;
+		}
+
+
+	}
+			
+	file.close();
 
 }
 
