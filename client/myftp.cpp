@@ -3,15 +3,20 @@
 #include <string.h>
 #include <string>
 #include <sstream>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <iostream>
+#include <fstream>
+#include <algorithm>
 #define MAX_LINE 256
 
-
+void dwld(std::string command, int s);
 void delf(std::string command, int s);
 void makeDir(std::string command, int s);
 void displayMenu();
@@ -59,7 +64,6 @@ int main(int argc, char * argv[])
     
     printf("Welcome to the TCP client!\n");
     displayMenu();
-    //add menu funtionality here
 
     if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) < 0)
     {
@@ -88,6 +92,11 @@ int main(int argc, char * argv[])
             makeDir(temp, s);
             continue;
         }
+		if(!strncmp(tok, "DWLD", 4))
+		{
+			dwld(temp, s);
+			continue;
+		}
 
         len = strlen(buf) + 1;
         if(send(s, temp.c_str(), strlen(temp.c_str()), 0)==-1)
@@ -104,21 +113,8 @@ int main(int argc, char * argv[])
             {
                 std::cout << buf << std::endl;
             }
+			continue;
         }
-
-	
-
-        //bzero((char *)&buf, sizeof(buf));
-	//wait for server response
-	/*if(recv(s, buf, sizeof(buf), 0) == -1)
-	{
-		perror("Error receiving data from server");
-	}
-	else
-	{
-		std::cout << buf << std::endl;
-	}*/
-
 	
         bzero((char *)&buf, sizeof(buf));
         displayMenu();
@@ -127,6 +123,74 @@ int main(int argc, char * argv[])
     close(s);
 }
 
+void dwld(std::string command, int s)
+{
+	//send this as 1 send, check delf
+	std::string dwld = command.substr(0, 4);
+	std::string fileName = command.substr(5, command.size());
+	char buf[MAX_LINE];
+
+	//scrub newline from filename
+	fileName.erase(std::remove(fileName.begin(), fileName.end(), '\n'), fileName.end());
+	
+	//std::cout <<">>" <<dwld << "<< >>" << fileName <<"<<"<<std::endl;
+
+	std::string message = dwld + " " + std::to_string(fileName.size()) + " " + fileName;
+
+	if(send(s, message.c_str(), strlen(message.c_str()), 0) == -1)
+	{
+		perror("couldn't send DWLD");
+		return;
+	}
+
+	//get file size from server
+	if(recv(s, buf, sizeof(buf), 0) == -1)
+	{
+		perror("Error receiving filesize from server");	
+		return;
+	}
+
+	int fileSize = atoi(buf);
+	//std::cout << "file size is " << fileSize << std::endl;
+	int bytesToRead = fileSize;
+
+	//int fd = open(fileName.c_str());
+	std::ofstream file;
+	file.open(fileName);
+	
+	while(1)
+	{
+        bzero((char *)&buf, sizeof(buf));
+		std::cout << "while" << std::endl;
+		//read a chunk of data from the socket
+		int numRead = read(s, buf, sizeof(buf));
+		std::cout << "numRead is " << numRead << std::endl;
+		bytesToRead -= numRead;
+	
+		if(numRead < 0)
+		{
+			perror("Could not receive file");
+			return;
+		}
+		
+		std::cout << "Received: >>" << buf << "<<" << std::endl;
+	
+		//if(buf == "-1")
+		/*if(!strcmp(buf, "-1"))		
+		{
+			std::cout << "Reached EOF" << std::endl;
+			break;
+		}*/
+
+		file.write(buf, numRead);			
+		if(bytesToRead == 0) break;
+	}
+
+	std::cout << "closing file, returning" << std::endl;
+	file.close();
+	return;
+
+}
 
 void delf(std::string command, int s){
 

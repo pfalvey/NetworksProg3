@@ -7,11 +7,13 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <dirent.h>
 #include <algorithm>
+#include <fstream>
 #define MAX_PENDING 5
 #define MAX_LINE 256
     
@@ -19,6 +21,7 @@ std::string get_permissions(std::string file);
 std::string dir_list();
 void deleteFile(int s, std::string buf);
 void makeDir(int s, std::string buf);
+void dwld(int s, std::string fileName);
 
 int main(int argc, char * argv[])
 {
@@ -114,15 +117,20 @@ int main(int argc, char * argv[])
 					exit(1);
 				}
 			}
-            else if (strcmp(tok, "DELF") == 0){
+      else if (strcmp(tok, "DELF") == 0){
                 std::cout<<"\n";
                 deleteFile(new_s, temp);
 
-            }
-            else if (strcmp(tok, "MDIR") == 0){
-                std::cout<<"\n";
-                makeDir(new_s, temp);
-            }
+      }
+      else if (strcmp(tok, "MDIR") == 0){
+          std::cout<<"\n";
+          makeDir(new_s, temp);
+      }
+	else if(strcmp(tok, "DWLD") == 0)
+	{
+		std::string fileName = temp.substr(7, temp.size()-1);
+		dwld(new_s, fileName);	
+	}	
             bzero((char *)&buf, sizeof(buf));
 		}
         printf("Client closed connection! Waiting for new client...\n");
@@ -187,6 +195,87 @@ std::string get_permissions(std::string file)
 	{
 		std::cout << "Error getting permissions for file " << file << std::endl;
 	}		
+
+}
+
+void dwld(int s, std::string fileName)
+{
+	char buf[MAX_LINE];
+	std::ifstream file(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
+	
+	//check if the file exists and open it
+	int fd = open(fileName.c_str(), 0);
+	if(fd == -1)
+	{
+		std::string response = "Could not open file ";
+		response += fileName;
+		if(send(s, response.c_str(), strlen(response.c_str()), 0) == -1)
+		{
+			perror("Could not send to client");
+			return;
+		}
+	}
+
+	//send filesize to client
+	file.seekg(0, std::ios::end);
+	int fileSize = file.tellg();
+	std::cout << "file size is " << fileSize << " " << std::to_string(fileSize) << std::endl;
+	if(send(s, std::to_string(fileSize).c_str(), sizeof(fileSize), 0) == -1)
+	{
+		perror("Error sending filesize");
+	}
+
+	//file is open, read a chunk and then write it to the socket
+	//this is done in a loop until the file is sent in its entirety
+	std::cout << "Opened fd and reading/sending" << std::endl;
+	while(1)
+	{
+		int numRead = read(fd, buf, sizeof(buf));
+		//if we don't read anything, we are done
+		if(numRead == 0) 
+		{
+			/*std::string terminate = "";
+			if(send(s, terminate.c_str(), strlen(terminate.c_str()), 0) == -1)
+			{
+				perror("Could not tell client to terminate");
+			}*/
+			std::cout << "Read nothing, prep termination" << std::endl;
+			break;
+		}
+
+		if(numRead < 0)
+		{
+			perror("Could not read from file");
+			return;
+		}
+
+		//make this a pointer so we can increment starting point
+		//if we have to do multiple writes
+		std::cout << "Read: " << buf << std::endl;
+		void *message = buf;
+		while(numRead > 0)
+		{
+			int numWritten = write(s, message, numRead);
+			if(numWritten == 0)
+			{
+				std::cout << "Nothing to write, terminating" << std::endl;
+				break;
+			}
+			if(numWritten <= 0)
+			{
+				perror("Could not write to socket");
+				return;
+			}
+			numRead -= numWritten;
+			message += numWritten;
+		}
+
+
+	}
+			
+	file.close();
+	//termination signal
+	//int temp = write(s, "-1", 2);
 
 }
 
