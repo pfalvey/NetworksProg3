@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <dirent.h>
 #include <algorithm>
 #define MAX_PENDING 5
@@ -16,6 +17,8 @@
     
 std::string get_permissions(std::string file);
 std::string dir_list();
+void deleteFile(int s, std::string buf);
+void makeDir(int s, std::string buf);
 
 int main(int argc, char * argv[])
 {
@@ -39,6 +42,7 @@ int main(int argc, char * argv[])
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = INADDR_ANY;
     sin.sin_port = htons(SERVER_PORT);
+		std::string current_dir = ".";
     /* setup passive open */
     if ((s = socket(PF_INET, SOCK_STREAM, 0)) < 0) 
     {
@@ -65,27 +69,44 @@ int main(int argc, char * argv[])
     while(1) 
     {
         if ((new_s = accept(s, (struct sockaddr *)&sin, &len)) < 0) 
-		{
+				{
             perror("simplex-talk: accept");
             exit(1);
-		}
+				}
 
         while (1)
-		{
+				{   
+            bzero((char *)&buf, sizeof(buf));
             if((len=recv(new_s, buf, sizeof(buf), 0))==-1)
-	    	{
+	    			{
                 perror("Server Received Error!");
                 exit(1);
-	    	}
+	    			}
             if (len==0) break;
             printf("TCP Server Received: %s", buf);
+
 			std::string temp = buf;
 			temp.erase(std::remove(temp.begin(), temp.end(), '\n'), temp.end());
 			//std::cout << temp.compare("LIST") << std::endl;
 			//if(strcmp(buf, "LIST"))
-			if(temp == "LIST")			
+      char * tok = strtok(buf, " ");
+			std::cout << "tok is " << tok << " and temp is " << temp << std::endl;
+			if(strcmp(tok, "CDIR") == 0)
 			{
-				std::cout << "Compare good" << std::endl;
+				//scrub first 5 characters, i.e. "CDIR "
+				//all that's left is command
+				temp.erase(0, 5);
+				chdir(temp.c_str());
+				std::string response = "Working directory changed to ";
+				response += temp;
+				if(send(new_s, response.c_str(), strlen(response.c_str()), 0) == -1)
+				{
+					perror("Error sending response to client");
+					exit(1);
+				}
+			}
+			else if(temp == "LIST")			
+			{
 				std::string response = dir_list();
 				if(send(new_s, response.c_str(), strlen(response.c_str()), 0) == -1)
 				{
@@ -93,8 +114,18 @@ int main(int argc, char * argv[])
 					exit(1);
 				}
 			}
+            else if (strcmp(tok, "DELF") == 0){
+                std::cout<<"\n";
+                deleteFile(new_s, temp);
+
+            }
+            else if (strcmp(tok, "MDIR") == 0){
+                std::cout<<"\n";
+                makeDir(new_s, temp);
+            }
+            bzero((char *)&buf, sizeof(buf));
 		}
-        printf("Client finishes, close the connection!\n");
+        printf("Client closed connection! Waiting for new client...\n");
         close(new_s);
     }
 }
@@ -157,4 +188,138 @@ std::string get_permissions(std::string file)
 		std::cout << "Error getting permissions for file " << file << std::endl;
 	}		
 
+}
+
+void deleteFile(int s, std::string buf){
+    std::stringstream ss;
+    ss << buf;
+    std::string command;
+    std::string size;
+    std::string file;
+    ss >> command;
+    ss >> size;
+    ss >> file;
+
+    DIR *dir;
+	struct dirent *ent;
+	//open the directory and check for matching file
+	if((dir = opendir(".")) != NULL)
+	{
+        int exists = -1;
+		while((ent = readdir(dir)) != NULL)
+		{
+			if(file.compare(ent->d_name) == 0){
+                exists = 1;
+            }
+		}
+        std::string result = "-1";
+        if (exists == 1){
+            result = "1";
+        }
+        char buffer[BUFSIZ];
+        bzero((char *)&buffer, sizeof(buffer));
+        result.copy(buffer, BUFSIZ);
+        int bufferLen = strlen(buffer) + 1;
+        buffer[bufferLen - 1] = '\0';
+        if (send(s, buffer, bufferLen, 0) == -1){
+            perror ("Server send error!\n");
+            exit(1);
+        }
+        if (result.compare("1") == 0){
+            char mesg[BUFSIZ];
+            bzero((char *)&mesg, sizeof(mesg));
+            if (recv(s, mesg, sizeof(mesg), 0) == -1){
+                perror("Error receiving message from client\n");
+                exit(1);
+            }
+            else {
+                if (strcmp(mesg, "Yes") == 0){
+                //delete file
+                    if (remove(file.c_str()) != 0){
+                        char last[BUFSIZ] = "Unable to remove file\n\0";
+                        int lastLen = strlen(last) + 1;
+                        if (send(s, last, lastLen, 0) == -1){
+                            perror ("Server send error!\n");
+                            exit(1);
+                        } 
+                    } else {
+                        char last[BUFSIZ] = "File successfully removed\n\0";
+                        int lastLen = strlen(last) + 1;
+                        if (send(s, last, lastLen, 0) == -1){
+                            perror ("Server send error!\n");
+                            exit(1);
+                        }
+                    }
+                }
+            }
+        }
+		closedir(dir);
+        /*char last[BUFSIZ] = "\0";
+        int lastLen = 1;
+        if (send(s, last, lastLen, 0) == -1){
+            perror("Server send error!\n");
+            exit(1);
+        }
+        std::cout<<"Truuuuuuu\n";*/
+	}
+	else
+	{
+		perror("error openning directory");
+	}
+
+}
+
+void makeDir(int s, std::string buf){
+    std::stringstream ss;
+    ss << buf;
+    std::string command;
+    std::string size;
+    std::string dirName;
+    ss >> command;
+    ss >> size;
+    ss >> dirName;
+
+    DIR *dir;
+	struct dirent *ent;
+	//open the directory and check for matching file
+	if((dir = opendir(".")) != NULL)
+	{
+        int exists = 1;
+		while((ent = readdir(dir)) != NULL)
+		{
+			if(dirName.compare(ent->d_name) == 0){
+                exists = -2;
+            }
+		}
+        std::string result = "-1";
+        if (exists == 1){
+            result = "1";
+        }
+        if (exists == -2){
+            result = "-2";
+        }
+        if (exists == 1){
+        //create directory
+            if(mkdir(dirName.c_str(), 0755) == -1){
+                result = "-1";
+                perror("here");
+            }
+        }
+                
+        char buffer[BUFSIZ];
+        bzero((char *)&buffer, sizeof(buffer));
+        result.copy(buffer, BUFSIZ);
+        int bufferLen = strlen(buffer) + 1;
+        buffer[bufferLen - 1] = '\0';
+        if (send(s, buffer, bufferLen, 0) == -1){
+            perror ("Server send error!\n");
+            exit(1);
+        }
+
+		closedir(dir);
+	}
+	else
+	{
+		perror("error openning directory");
+	}
 }

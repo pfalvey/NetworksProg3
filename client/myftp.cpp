@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
+#include <sstream>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -8,7 +10,12 @@
 #include <unistd.h>
 #include <iostream>
 #define MAX_LINE 256
-    
+
+
+void delf(std::string command, int s);
+void makeDir(std::string command, int s);
+void displayMenu();
+
 int main(int argc, char * argv[])
 {
     int SERVER_PORT;
@@ -50,7 +57,8 @@ int main(int argc, char * argv[])
         perror("simplex-talk: socket"); exit(1);
     }
     
-    printf("Welcome to the TCP client! To quit, type \'Exit\'\n");
+    printf("Welcome to the TCP client!\n");
+    displayMenu();
     //add menu funtionality here
 
     if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) < 0)
@@ -64,33 +72,172 @@ int main(int argc, char * argv[])
     {
         //display menu
         buf[MAX_LINE-1] = '\0';
-    	if (!strncmp(buf, "Exit",4))
-	{
-	    	//switch on input type
-        	printf("Good Bye!\n");
-        	break;
-	}
+        if (!strncmp(buf, "QUIT",4))
+	    {
+            printf("Good Bye!\n");
+            break;
+	    }
+        std::string temp(buf);
+        char * tok = strtok(buf, " ");
+        if (!strncmp(tok, "DELF", 4))
+        {
+            delf(temp, s);
+            continue;
+        }
+        if (!strncmp(tok, "MDIR", 4)){
+            makeDir(temp, s);
+            continue;
+        }
 
         len = strlen(buf) + 1;
-        if(send(s, buf, len, 0)==-1)
-	{
+        if(send(s, temp.c_str(), strlen(temp.c_str()), 0)==-1)
+	    {
             perror("client send error!"); exit(1);
-	}
+        }
+        if(!strncmp(tok, "LIST", 4) || !strncmp(tok, "CDIR", 4)){
+            //wait for server response
+            if(recv(s, buf, sizeof(buf), 0) == -1)
+            {
+                perror("Error receiving data from server");
+            }
+            else
+            {
+                std::cout << buf << std::endl;
+            }
+        }
 
-	bzero(buf, sizeof(buf));
 	
+
+        //bzero((char *)&buf, sizeof(buf));
 	//wait for server response
-	if(recv(s, buf, sizeof(buf), 0) == -1)
+	/*if(recv(s, buf, sizeof(buf), 0) == -1)
 	{
 		perror("Error receiving data from server");
 	}
 	else
 	{
 		std::cout << buf << std::endl;
-	}
+	}*/
 
 	
+        bzero((char *)&buf, sizeof(buf));
+        displayMenu();
+
     }
     close(s);
 }
 
+
+void delf(std::string command, int s){
+
+    
+    std::stringstream ss;
+    ss.str(command);
+    std::string delf;
+    std::string length;
+    std::string fileName;
+    
+    ss >> delf;
+    ss >> fileName;
+    length = std::to_string(fileName.size());
+    std::string message = delf + " " + length + " " +fileName;
+
+    char temp[BUFSIZ];
+    bzero((char *)&temp, sizeof(temp));
+    message.copy(temp, BUFSIZ);
+
+    //const char * temp = message.c_str();
+    int tempLen = strlen(temp) + 1;
+    temp[tempLen-1] = '\0';
+    if(send(s, temp, tempLen, 0) == -1)
+        {
+            perror ("Client Send Error!\n");
+            exit(1);
+        }
+    char buf[BUFSIZ];
+    bzero((char *)&buf, sizeof(buf));
+    if(recv(s, buf, sizeof(buf), 0) == -1)
+	{
+		perror("Error receiving data from server\n");
+	}
+    if (strcmp(buf, "1") == 0){
+        std::cout<<"Are you sure you want to delete the file " <<fileName<<"?\nEnter \"Yes\" to delete or \"No\" to ignore:";
+        std::string result;
+        std::cin >> result;
+        if (result.compare("Yes") == 0){
+            char confirm[BUFSIZ] = "Yes\0";
+            int conLen = 4;
+            if(send(s, confirm, conLen, 0) == -1){
+                perror("client send error!\n");
+                exit(1);
+            }
+            bzero((char *)&confirm, sizeof(confirm));
+            if (recv(s, confirm, sizeof(confirm), 0) == -1){
+                perror("Error receiving data from server\n");
+            }
+            else {
+                std::cout<<confirm<<std::endl;
+            }
+        }
+        else {
+            std::cout<<"Delete abandoned by the user!\n";
+            char confirm[BUFSIZ] = "No\0";
+            int conLen = 3;
+            if(send(s, confirm, conLen, 0) == -1){
+                perror("client send error!\n");
+                exit(1);
+            }
+        }
+    }
+    else {
+        std::cout<<"The file does not exist on server\n";
+    }
+    
+}
+
+void makeDir(std::string command, int s){
+    std::stringstream ss;
+    ss.str(command);
+    std::string mdir;
+    std::string length;
+    std::string dirName;
+    
+    ss >> mdir;
+    ss >> dirName;
+    length = std::to_string(dirName.size());
+    std::string message = mdir + " " + length + " " +dirName;
+
+    char temp[BUFSIZ];
+    bzero((char *)&temp, sizeof(temp));
+    message.copy(temp, BUFSIZ);
+
+    //const char * temp = message.c_str();
+    int tempLen = strlen(temp) + 1;
+    temp[tempLen-1] = '\0';
+    if(send(s, temp, tempLen, 0) == -1)
+        {
+            perror ("Client Send Error!\n");
+            exit(1);
+        }
+    char buf[BUFSIZ];
+    bzero((char *)&buf, sizeof(buf));
+    if(recv(s, buf, sizeof(buf), 0) == -1)
+	{
+		perror("Error receiving data from server\n");
+	}
+    if (strcmp(buf, "1") == 0){
+        std::cout<<"The directory was successfully made\n";
+    }
+    else if (strcmp(buf, "-2") == 0){
+        std::cout<<"The directory already exists on server\n";
+    }
+    else {
+        std::cout<<"Error in making directory\n";
+    }
+
+}
+
+void displayMenu(){
+    std::cout<<"Menu:\n\tDWLD [FILE]\n\t\tdownloads a file from the server\n\tUPLD [FILE]\n\t\tuploads a file to the server\n\tDELF [FILE]\n\t\tdeletes a file from the server\n\tLIST\n\t\tlists the directory at the server\n\tMDIR [DIRECTORY NAME]\n\t\tcreate a new directory at the server\n\tRDIR [DIRECTORY NAME]\n\t\tremoves a directory at the server\n\tCDIR [DIRECTORY NAME]\n\t\tchanges to a new directory at the server\n\tQUIT\n\t\tquits the program\n";
+
+}
