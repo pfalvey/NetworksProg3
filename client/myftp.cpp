@@ -14,6 +14,7 @@
 
 void delf(std::string command, int s);
 void makeDir(std::string command, int s);
+void displayMenu();
 
 int main(int argc, char * argv[])
 {
@@ -56,7 +57,8 @@ int main(int argc, char * argv[])
         perror("simplex-talk: socket"); exit(1);
     }
     
-    printf("Welcome to the TCP client! To quit, type \'Exit\'\n");
+    printf("Welcome to the TCP client!\n");
+    displayMenu();
     //add menu funtionality here
 
     if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) < 0)
@@ -70,7 +72,7 @@ int main(int argc, char * argv[])
     {
         //display menu
         buf[MAX_LINE-1] = '\0';
-        if (!strncmp(buf, "Exit",4))
+        if (!strncmp(buf, "QUIT",4))
 	    {
             printf("Good Bye!\n");
             break;
@@ -119,6 +121,7 @@ int main(int argc, char * argv[])
 
 	
         bzero((char *)&buf, sizeof(buf));
+        displayMenu();
 
     }
     close(s);
@@ -231,5 +234,10 @@ void makeDir(std::string command, int s){
     else {
         std::cout<<"Error in making directory\n";
     }
+
+}
+
+void displayMenu(){
+    std::cout<<"Menu:\n\tDWLD [FILE]\n\t\tdownloads a file from the server\n\tUPLD [FILE]\n\t\tuploads a file to the server\n\tDELF [FILE]\n\t\tdeletes a file from the server\n\tLIST\n\t\tlists the directory at the server\n\tMDIR [DIRECTORY NAME]\n\t\tcreate a new directory at the server\n\tRDIR [DIRECTORY NAME]\n\t\tremoves a directory at the server\n\tCDIR [DIRECTORY NAME]\n\t\tchanges to a new directory at the server\n\tQUIT\n\t\tquits the program\n";
 
 }
