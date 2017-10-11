@@ -132,8 +132,6 @@ void dwld(std::string command, int s)
 
 	//scrub newline from filename
 	fileName.erase(std::remove(fileName.begin(), fileName.end(), '\n'), fileName.end());
-	
-	//std::cout <<">>" <<dwld << "<< >>" << fileName <<"<<"<<std::endl;
 
 	std::string message = dwld + " " + std::to_string(fileName.size()) + " " + fileName;
 
@@ -151,21 +149,29 @@ void dwld(std::string command, int s)
 	}
 
 	int fileSize = atoi(buf);
-	//std::cout << "file size is " << fileSize << std::endl;
+	if(fileSize == -1) return;
 	int bytesToRead = fileSize;
 
 	//int fd = open(fileName.c_str());
 	std::ofstream file;
 	file.open(fileName);
+
+	//get time to measure throughput
+	struct timeval tv1;
+	struct timeval tv2;
+
+	gettimeofday(&tv1, NULL);
 	
 	while(1)
 	{
         bzero((char *)&buf, sizeof(buf));
-		std::cout << "while" << std::endl;
+
 		//read a chunk of data from the socket
 		int numRead = read(s, buf, sizeof(buf));
-		std::cout << "numRead is " << numRead << std::endl;
+
 		bytesToRead -= numRead;
+	
+		if(buf == "-1") break;		
 	
 		if(numRead < 0)
 		{
@@ -173,21 +179,20 @@ void dwld(std::string command, int s)
 			return;
 		}
 		
-		std::cout << "Received: >>" << buf << "<<" << std::endl;
-	
-		//if(buf == "-1")
-		/*if(!strcmp(buf, "-1"))		
-		{
-			std::cout << "Reached EOF" << std::endl;
-			break;
-		}*/
-
 		file.write(buf, numRead);			
 		if(bytesToRead == 0) break;
 	}
 
-	std::cout << "closing file, returning" << std::endl;
 	file.close();
+
+	gettimeofday(&tv2, NULL);
+	//calculate elapsed seconds
+	double elapsed = (tv2.tv_sec - tv1.tv_sec) *100000;
+	//calculate elapsed microseconds
+	elapsed += tv2.tv_usec - tv1.tv_usec;
+
+	double mbps = fileSize / elapsed;
+	std::cout << fileSize << " bytes transferred in " << elapsed << " microseconds: " << mbps << " Megabytes/sec" << std::endl;
 	return;
 
 }

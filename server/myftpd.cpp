@@ -21,7 +21,7 @@ std::string get_permissions(std::string file);
 std::string dir_list();
 void deleteFile(int s, std::string buf);
 void makeDir(int s, std::string buf);
-void dwld(int s, std::string fileName);
+void dwld(int s, std::string buf);
 
 int main(int argc, char * argv[])
 {
@@ -128,8 +128,7 @@ int main(int argc, char * argv[])
       }
 	else if(strcmp(tok, "DWLD") == 0)
 	{
-		std::string fileName = temp.substr(7, temp.size()-1);
-		dwld(new_s, fileName);	
+		dwld(new_s, temp);	
 	}	
             bzero((char *)&buf, sizeof(buf));
 		}
@@ -198,14 +197,24 @@ std::string get_permissions(std::string file)
 
 }
 
-void dwld(int s, std::string fileName)
-{
+void dwld(int s, std::string cmd)
+{    
+	std::stringstream ss;
+    ss << cmd;
+    std::string command;
+    std::string size;
+    std::string fileName;
+    ss >> command;
+    ss >> size;
+    ss >> fileName;
+
 	char buf[MAX_LINE];
 	std::ifstream file(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
 	
 	//check if the file exists and open it
-	int fd = open(fileName.c_str(), 0);
-	if(fd == -1)
+	std::cout << "file name is >>" << fileName << "<<" << std::endl;
+	int fd = open(fileName.c_str(), O_RDONLY);
+	if(fd == -1 || !file.good())
 	{
 		std::string response = "Could not open file ";
 		response += fileName;
@@ -219,7 +228,8 @@ void dwld(int s, std::string fileName)
 	//send filesize to client
 	file.seekg(0, std::ios::end);
 	int fileSize = file.tellg();
-	std::cout << "file size is " << fileSize << " " << std::to_string(fileSize) << std::endl;
+	int bytesToRead = fileSize;
+
 	if(send(s, std::to_string(fileSize).c_str(), sizeof(fileSize), 0) == -1)
 	{
 		perror("Error sending filesize");
@@ -227,38 +237,31 @@ void dwld(int s, std::string fileName)
 
 	//file is open, read a chunk and then write it to the socket
 	//this is done in a loop until the file is sent in its entirety
-	std::cout << "Opened fd and reading/sending" << std::endl;
+
 	while(1)
 	{
 		int numRead = read(fd, buf, sizeof(buf));
 		//if we don't read anything, we are done
 		if(numRead == 0) 
 		{
-			/*std::string terminate = "";
-			if(send(s, terminate.c_str(), strlen(terminate.c_str()), 0) == -1)
-			{
-				perror("Could not tell client to terminate");
-			}*/
-			std::cout << "Read nothing, prep termination" << std::endl;
 			break;
 		}
 
 		if(numRead < 0)
 		{
 			perror("Could not read from file");
+			int t = send(s, "-1", sizeof("-1"), 0);
 			return;
 		}
 
 		//make this a pointer so we can increment starting point
 		//if we have to do multiple writes
-		std::cout << "Read: " << buf << std::endl;
 		void *message = buf;
 		while(numRead > 0)
 		{
 			int numWritten = write(s, message, numRead);
 			if(numWritten == 0)
 			{
-				std::cout << "Nothing to write, terminating" << std::endl;
 				break;
 			}
 			if(numWritten <= 0)
@@ -274,8 +277,6 @@ void dwld(int s, std::string fileName)
 	}
 			
 	file.close();
-	//termination signal
-	//int temp = write(s, "-1", 2);
 
 }
 
