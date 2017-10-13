@@ -1,3 +1,11 @@
+/*
+ *    Computer Networks: Programming Assignment 3 - Server
+ *  
+ *    Team: Patrick Falvey, Matt Flanagan, and Michael Farren
+ *  
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -581,7 +589,6 @@ void rdir(int s, std::string buf)
         return;
     }
 
-    std::cout << ".." << confirm << "..\n";
     /* Client does not want to delete directory */
     if (confirm[0] == 'N') { std::cout << "wow\n"; return; }
 

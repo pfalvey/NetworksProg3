@@ -1,3 +1,12 @@
+/*
+ *  Computer Networks: Programming Assignment 3 - Client
+ *
+ *  Team: Patrick Falvey, Matt Flanagan, and Michael FArren
+ *
+ */
+
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -483,7 +492,6 @@ void rdir(std::string command, int s)
 
             if (confirm.compare("No") == 0)
             {
-                std::cout << "No\n";
                 if (send(s, confirm.c_str(), strlen(confirm.c_str()), 0) == -1)
                 {
                     perror("Error sending data to server");
