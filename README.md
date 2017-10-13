@@ -1,13 +1,16 @@
 # NetworksProg3
 
+Patrick Falvey
+Mikey Farren
+Matthew Flanagan
 
 Tasks:
 
 Matt: DWLD (throughput), CDIR, LIST
 
-Mikey: UPLD (throughput), RDIR, QUIT
+Mikey: UPLD (throughput), RDIR
 
-Patrick: DELF, MDIR, command line arguments
+Patrick: DELF, MDIR, command line arguments, QUIT
 
 
 Included Files: /client
