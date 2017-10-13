@@ -21,6 +21,7 @@ void delf(std::string command, int s);
 void makeDir(std::string command, int s);
 void displayMenu();
 void upld(std::string command, int s);
+void rdir(std::string command, int s);
 
 int main(int argc, char * argv[])
 {
@@ -101,6 +102,11 @@ int main(int argc, char * argv[])
         if (!strncmp(tok, "UPLD", 4))
         {
             upld(temp, s);
+            continue;
+        }
+        if (!strncmp(tok, "RDIR", 4))
+        {
+            rdir(temp, s);
             continue;
         }
 
@@ -418,3 +424,114 @@ void upld(std::string command, int s)
     }
     std::cout << thru << std::endl;
 }
+
+void rdir(std::string command, int s)
+{
+    /* Set Strings */
+    std::stringstream ss;
+    ss.str(command);
+    std::string rdir;
+    std::string length;
+    std::string dirName;    
+
+    ss >> rdir;
+    ss >> dirName;
+    length = std::to_string(dirName.size());
+    std::string message = rdir + " " + length + " " + dirName;
+    
+    /* Send Operation, Directory Name Length, and Directory Name */
+    char temp[BUFSIZ];
+    bzero((char *)&temp, sizeof(temp));
+    message.copy(temp, BUFSIZ);
+
+    int tempLen = strlen(temp) + 1;
+    temp[tempLen - 1] = '\0';
+
+    if (send(s, temp, tempLen, 0) == -1)
+    {
+        perror("Client Send Error");
+        return;
+    }
+
+    /* Server Response */
+    char resp[BUFSIZ];
+    bzero((char *)&resp, sizeof(resp));
+
+    if (recv(s, resp, sizeof(resp), 0) == -1)
+    {
+        perror("Error receiving data from server");
+        return;
+    }
+    int confirm_num = atoi(resp);
+
+    /* From Server: Directory Does Not Exist */
+    if (confirm_num < 0)
+    {
+        std::cout << "The directory does not exist on server\n";
+        return;
+    }
+
+    /* From Server: Directory Does Exist */
+    if (confirm_num > 0)
+    {
+        std::cout << "Confirm you would like to delete directory " << dirName << " (Yes/No)\n"; 
+        while (1)
+        {
+            std::cout << "   >> ";
+            std::string confirm;
+            std::cin >> confirm;
+
+            if (confirm.compare("No") == 0)
+            {
+                std::cout << "No\n";
+                if (send(s, confirm.c_str(), strlen(confirm.c_str()), 0) == -1)
+                {
+                    perror("Error sending data to server");
+                    return;
+                }
+                std::cout << "Delete abandoned by the user!\n";
+                return;
+            } 
+            else if (confirm.compare("Yes") == 0)
+            {
+                if (send(s, confirm.c_str(), strlen(confirm.c_str()), 0) == -1)
+                {
+                    perror("Error sending data to server");
+                    return;
+                }
+                break;
+            }
+        }
+    }
+
+    /* Aknowledgment of Deletion */
+    char ackn[BUFSIZ];
+    bzero((char *)&ackn, sizeof(ackn));
+
+    if (recv(s, ackn, sizeof(ackn), 0) == -1)
+    {
+        perror("Error receiving data from server");
+        return;
+    }
+
+    if (ackn[0] == 'Y') 
+    {
+        std::cout << "Directory deleted\n";
+        return;
+    }
+
+    if (ackn[0] == 'N')
+    {
+        std::cout << "Failed to delete directory\n";
+        return;
+    }
+}
+
+
+
+
+
+
+
+
+

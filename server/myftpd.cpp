@@ -25,6 +25,7 @@ void deleteFile(int s, std::string buf);
 void makeDir(int s, std::string buf);
 void dwld(int s, std::string buf);
 void upld(int s, std::string buf);
+void rdir(int s, std::string buf);
 
 int main(int argc, char * argv[])
 {
@@ -137,6 +138,11 @@ int main(int argc, char * argv[])
       {
           upld(new_s, temp);
       }	
+      else if (strcmp(tok, "RDIR") == 0)
+      {
+          rdir(new_s, temp);
+      }
+
             bzero((char *)&buf, sizeof(buf));
 		}
         printf("Client closed connection! Waiting for new client...\n");
@@ -526,3 +532,78 @@ void upld(int s, std::string buf)
         exit(1);
     }
 }
+
+void rdir(int s, std::string buf)
+{
+    /* Set Strings */
+    std::stringstream ss;
+    ss << buf;
+    std::string command;
+    std::string size;
+    std::string dirName;
+    
+    ss >> command;
+    ss >> size;
+    ss >> dirName;
+
+    /* Check if Directory Exists */
+    DIR *dir = opendir(dirName.c_str());
+
+    if (dir) 
+    {
+        if (send(s, "1", sizeof("1"), 0) == -1)
+        {
+            perror("Server Send Error");
+            return;
+        }
+    }
+    else if (ENOENT == errno) 
+    {
+       if (send(s, "-1", sizeof("-1"), 0) == -1)
+       {
+           perror("Server Send Error");
+       }
+       return;
+    }
+    else
+    {
+        perror("opendir() error");
+        return;
+    }
+
+    /* Client Confirmation to Delete */
+    char confirm[BUFSIZ];
+    bzero((char *)&confirm, sizeof(confirm));
+
+    if (recv(s, confirm, sizeof(confirm), 0) == -1)
+    {
+        perror("Error receiving data from client");
+        return;
+    }
+
+    std::cout << ".." << confirm << "..\n";
+    /* Client does not want to delete directory */
+    if (confirm[0] == 'N') { std::cout << "wow\n"; return; }
+
+    /* Client wants to delete directory */
+    std::string response; 
+    if (rmdir(dirName.c_str()) == 0) { response = "Yes"; }
+    else { response = "No"; }
+
+    if (send(s, response.c_str(), sizeof(response.c_str()), 0) == -1)
+    {
+        perror("Error sending data to client");
+        return;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
