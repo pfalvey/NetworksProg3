@@ -98,14 +98,14 @@ int main(int argc, char * argv[])
                 exit(1);
 	    			}
             if (len==0) break;
-            printf("TCP Server Received: %s", buf);
+            //printf("TCP Server Received: %s", buf);
 
 			std::string temp = buf;
 			temp.erase(std::remove(temp.begin(), temp.end(), '\n'), temp.end());
 			//std::cout << temp.compare("LIST") << std::endl;
 			//if(strcmp(buf, "LIST"))
       char * tok = strtok(buf, " ");
-			std::cout << "tok is " << tok << " and temp is " << temp << std::endl;
+			//std::cout << "tok is " << tok << " and temp is " << temp << std::endl;
 			if(strcmp(tok, "CDIR") == 0)
 			{
 				//scrub first 5 characters, i.e. "CDIR "
@@ -233,7 +233,7 @@ void dwld(int s, std::string cmd)
 	std::ifstream file(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
 	
 	//check if the file exists and open it
-	std::cout << "file name is >>" << fileName << "<<" << std::endl;
+	//std::cout << "file name is >>" << fileName << "<<" << std::endl;
 	int fd = open(fileName.c_str(), O_RDONLY);
 	if(fd == -1 || !file.good())
 	{
