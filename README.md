@@ -13,12 +13,10 @@ Patrick: DELF, MDIR, command line arguments
 Included Files: /client
    Makefile			Compiles C++ Code to create executable ./myftp
    myftp.cpp			C++ code for the client
-   testUPLD.txt			Text file that can be sent from client to server using the UPLD command
 
 Included Files: /server
    Makefile			Compiles C++ Code to create executable ./myftpd
    myftpd.cpp			C++ code for server
-   testDWLD.txt			Text file that can be sent from server to client using the DWLD command
 
 
 Example Command Line for Server (run from student01):
