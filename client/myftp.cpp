@@ -20,6 +20,7 @@ void dwld(std::string command, int s);
 void delf(std::string command, int s);
 void makeDir(std::string command, int s);
 void displayMenu();
+void upld(std::string command, int s);
 
 int main(int argc, char * argv[])
 {
@@ -97,9 +98,14 @@ int main(int argc, char * argv[])
 			dwld(temp, s);
 			continue;
 		}
+        if (!strncmp(tok, "UPLD", 4))
+        {
+            upld(temp, s);
+            continue;
+        }
 
         len = strlen(buf) + 1;
-        if(send(s, temp.c_str(), strlen(temp.c_str()), 0)==-1)
+        if(send(s, temp.c_str(), strlen(temp.c_str()), 0)== -1)
 	    {
             perror("client send error!"); exit(1);
         }
@@ -309,4 +315,106 @@ void makeDir(std::string command, int s){
 void displayMenu(){
     std::cout<<"Menu:\n\tDWLD [FILE]\n\t\tdownloads a file from the server\n\tUPLD [FILE]\n\t\tuploads a file to the server\n\tDELF [FILE]\n\t\tdeletes a file from the server\n\tLIST\n\t\tlists the directory at the server\n\tMDIR [DIRECTORY NAME]\n\t\tcreate a new directory at the server\n\tRDIR [DIRECTORY NAME]\n\t\tremoves a directory at the server\n\tCDIR [DIRECTORY NAME]\n\t\tchanges to a new directory at the server\n\tQUIT\n\t\tquits the program\n";
 
+}
+
+void upld(std::string command, int s)
+{
+    /* Set Strings */
+    std::stringstream ss;
+    ss.str(command);
+    std::string upld;
+    std::string length;
+    std::string filename;
+
+    ss >> upld;
+    ss >> filename;
+    char * c_filename = (char *)filename.c_str();
+    length = std::to_string(filename.size());
+
+    /* Check if file exists & open */
+    std::ifstream file(filename.c_str(), std::ifstream::in | std::ifstream::binary);
+
+    int fd = open(filename.c_str(), O_RDONLY);
+    if (fd == -1 || !file.good())
+    {
+        perror("Could not open file");
+        return;
+    }
+
+    /* Send operation, filename size, and filename */
+    std::string message = upld + " " + length + " " + filename;
+    char temp[BUFSIZ];
+    bzero((char *)&temp, sizeof(temp));
+    message.copy(temp, BUFSIZ);
+    int temp_len = strlen(temp) + 1;
+    temp[temp_len-1] = '\0';
+
+    if (send(s, temp, temp_len, 0) == -1)
+    {
+        perror("Client Send Error!\n");
+        return;
+    }
+
+    /* Receive Acknowledgement */
+    char ackn[BUFSIZ];
+    bzero((char *)&ackn, sizeof(ackn));
+    if (recv(s, ackn, sizeof(ackn), 0) == -1)
+    {
+        perror("Error receiving data from server\n");
+        return;
+    }
+
+    /* Send Size of File */
+    file.seekg(0, std::ios::end);
+    long int file_size = file.tellg();
+    long int bytesToRead = file_size;
+
+    if (send(s, std::to_string(file_size).c_str(), sizeof(file_size), 0) == -1) {
+        perror("Client Send Error!\n");
+        return;
+    }
+
+    /* Send file to server */
+    char buf[BUFSIZ];
+    while (1) 
+    {
+        int numRead = read(fd, buf, sizeof(buf));
+
+        if (numRead == 0) { break; }
+
+        if (numRead < 0)
+        {
+            perror("Could not read from file");
+            int t = send(s, "-1", sizeof("-1"), 0);
+            return;
+        }
+
+        void *message = buf;
+        while (numRead > 0)
+        {
+            int numWritten = write(s, message, numRead);
+
+            if (numWritten == 0) { break; }
+
+            if (numWritten <= 0)
+            {
+                perror("Could not write to socket");
+                return;
+            }
+
+            numRead -= numWritten;
+            message += numWritten;
+        }
+    }
+    file.close();
+
+    /* Receive and Print Throughput */
+    char thru[BUFSIZ];
+    bzero((char *)&thru, sizeof(thru));
+    if (recv(s, thru, sizeof(thru), 0) == -1)
+    {
+        perror("Error receiving data from server\n");
+        return;
+    }
+    std::cout << thru << std::endl;
 }

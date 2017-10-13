@@ -14,6 +14,8 @@
 #include <dirent.h>
 #include <algorithm>
 #include <fstream>
+#include <time.h>
+#include <sys/time.h>
 #define MAX_PENDING 5
 #define MAX_LINE 256
     
@@ -22,6 +24,7 @@ std::string dir_list();
 void deleteFile(int s, std::string buf);
 void makeDir(int s, std::string buf);
 void dwld(int s, std::string buf);
+void upld(int s, std::string buf);
 
 int main(int argc, char * argv[])
 {
@@ -129,7 +132,11 @@ int main(int argc, char * argv[])
 	else if(strcmp(tok, "DWLD") == 0)
 	{
 		dwld(new_s, temp);	
-	}	
+	}
+      else if (strcmp(tok, "UPLD") == 0)
+      {
+          upld(new_s, temp);
+      }	
             bzero((char *)&buf, sizeof(buf));
 		}
         printf("Client closed connection! Waiting for new client...\n");
@@ -412,4 +419,110 @@ void makeDir(int s, std::string buf){
 	{
 		perror("error openning directory");
 	}
+}
+
+void upld(int s, std::string buf)
+{
+    /* Set Strings */
+    std::stringstream ss;
+    ss.str(buf);
+    std::string command;
+    std::string length;
+    std::string filename;
+
+   /* Determine Size of Filename and Filename */
+    ss >> command;
+    ss >> length;
+    ss >> filename;
+
+    /* Send Back Acknowledgement */
+    char ackn[BUFSIZ] = "Length of filename and filename received\n\0";
+    if (send(s, ackn, strlen(ackn) + 1, 0) == -1)
+    {   
+        perror("Server Send Error!\n");
+        exit(1);
+    }
+
+    /* Receive Size of File */
+    char filesize[BUFSIZ];
+    bzero((char *)&filesize, sizeof(filesize));
+    if (recv(s, filesize, sizeof(filesize), 0) == -1)
+    {   
+        perror("Error Receiving File Size From Client\n");
+        exit(1);
+    }
+
+    long int iFileSize = atoi(filesize);
+    if (iFileSize == -1) { return; }
+    int bytesToRead = iFileSize;
+
+    /* Create File */
+    std::string delimeter = "/";
+    size_t pos = 0;
+    std::string token;
+    while ((pos = filename.find(delimeter)) != std::string::npos)
+    {   
+        token = filename.substr(0, pos);
+        filename.erase(0, pos + delimeter.length());
+    }
+
+    std::ofstream file;
+    file.open(filename);
+
+    /* Loop to Receive File and Time Process */
+    struct timeval tv1;
+    gettimeofday(&tv1, NULL);
+    double time1 = tv1.tv_sec *(int)1e6 + tv1.tv_usec;
+
+    char recvBuf[BUFSIZ];
+    while (1)
+    {
+        bzero((char *)&recvBuf, sizeof(recvBuf));
+
+        int numRead = read(s, recvBuf, sizeof(recvBuf));
+
+        bytesToRead -= numRead;
+
+        if (recvBuf == "-1") { break; }
+
+        if (numRead < 0)
+        {
+            perror("Could not receive file");
+            return;
+        }
+
+        file.write(recvBuf, numRead);
+        if (bytesToRead <= 0) { break; }
+    }
+
+    file.close();
+
+    struct timeval tv2;
+    gettimeofday(&tv2, NULL);
+    double time2 = tv2.tv_sec *(int)1e6 + tv2.tv_usec;
+
+    /* Compute and Send Throughput to Servier */
+    double elapsed_d = (time2 - time1);
+    elapsed_d = elapsed_d / (int)1e6;
+    std::string elapsed = std::to_string(elapsed_d);
+
+    double mbps_d = ((double)iFileSize / (double)1e6)  / elapsed_d;
+    std::string mbps = std::to_string(mbps_d);
+
+    std::string FileSize_str = filesize;
+    
+    std::string throughput_str;
+    throughput_str = FileSize_str + " bytes transferred in " + elapsed + " seconds : " + mbps + " Megabytes/sec\n";
+
+    char throughput[BUFSIZ];
+    bzero((char *)&throughput, sizeof(throughput));
+    throughput_str.copy(throughput, BUFSIZ);
+    int thru_len = strlen(throughput) + 1;
+    throughput[thru_len-1] = '\0';
+
+    if (send(s, throughput, thru_len, 0) == -1)
+    {
+        perror("Server Send Error\n");
+        exit(1);
+    }
 }
