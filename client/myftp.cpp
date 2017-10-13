@@ -1,7 +1,7 @@
 /*
  *  Computer Networks: Programming Assignment 3 - Client
  *
- *  Team: Patrick Falvey, Matt Flanagan, and Michael FArren
+ *  Team: Patrick Falvey, Matt Flanagan, and Michael Farren
  *
  */
 
@@ -31,7 +31,7 @@ void makeDir(std::string command, int s);
 void displayMenu();
 void upld(std::string command, int s);
 void rdir(std::string command, int s);
-
+//main function
 int main(int argc, char * argv[])
 {
     int SERVER_PORT;
@@ -94,6 +94,7 @@ int main(int argc, char * argv[])
 	    }
         std::string temp(buf);
         char * tok = strtok(buf, " ");
+        //parse through input to see if commands are necessary
         if (!strncmp(tok, "DELF", 4))
         {
             delf(temp, s);
@@ -143,7 +144,7 @@ int main(int argc, char * argv[])
     }
     close(s);
 }
-
+//this function downloads a file from the server
 void dwld(std::string command, int s)
 {
 	//send this as 1 send, check delf
@@ -173,7 +174,6 @@ void dwld(std::string command, int s)
 	if(fileSize == -1) return;
 	int bytesToRead = fileSize;
 
-	//int fd = open(fileName.c_str());
 	std::ofstream file;
 	file.open(fileName);
 
@@ -217,10 +217,10 @@ void dwld(std::string command, int s)
 	return;
 
 }
-
+//this function deletes a file from the server
 void delf(std::string command, int s){
 
-    
+    //parse input
     std::stringstream ss;
     ss.str(command);
     std::string delf;
@@ -236,9 +236,9 @@ void delf(std::string command, int s){
     bzero((char *)&temp, sizeof(temp));
     message.copy(temp, BUFSIZ);
 
-    //const char * temp = message.c_str();
     int tempLen = strlen(temp) + 1;
     temp[tempLen-1] = '\0';
+    //send command to server
     if(send(s, temp, tempLen, 0) == -1)
         {
             perror ("Client Send Error!\n");
@@ -246,10 +246,12 @@ void delf(std::string command, int s){
         }
     char buf[BUFSIZ];
     bzero((char *)&buf, sizeof(buf));
+    //receiver server response
     if(recv(s, buf, sizeof(buf), 0) == -1)
 	{
 		perror("Error receiving data from server\n");
 	}
+    //confirm with user
     if (strcmp(buf, "1") == 0){
         std::cout<<"Are you sure you want to delete the file " <<fileName<<"?\nEnter \"Yes\" to delete or \"No\" to ignore:";
         std::string result;
@@ -284,7 +286,7 @@ void delf(std::string command, int s){
     }
     
 }
-
+//this function makes a new directory
 void makeDir(std::string command, int s){
     std::stringstream ss;
     ss.str(command);
@@ -326,12 +328,12 @@ void makeDir(std::string command, int s){
     }
 
 }
-
+//this function displays the menu
 void displayMenu(){
     std::cout<<"Menu:\n\tDWLD [FILE]\n\t\tdownloads a file from the server\n\tUPLD [FILE]\n\t\tuploads a file to the server\n\tDELF [FILE]\n\t\tdeletes a file from the server\n\tLIST\n\t\tlists the directory at the server\n\tMDIR [DIRECTORY NAME]\n\t\tcreate a new directory at the server\n\tRDIR [DIRECTORY NAME]\n\t\tremoves a directory at the server\n\tCDIR [DIRECTORY NAME]\n\t\tchanges to a new directory at the server\n\tQUIT\n\t\tquits the program\n";
 
 }
-
+//this function uploads a file to the server
 void upld(std::string command, int s)
 {
     /* Set Strings */
@@ -433,7 +435,7 @@ void upld(std::string command, int s)
     }
     std::cout << thru << std::endl;
 }
-
+//this function removes a directory from the server
 void rdir(std::string command, int s)
 {
     /* Set Strings */

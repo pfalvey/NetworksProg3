@@ -98,14 +98,10 @@ int main(int argc, char * argv[])
                 exit(1);
 	    			}
             if (len==0) break;
-            //printf("TCP Server Received: %s", buf);
 
 			std::string temp = buf;
 			temp.erase(std::remove(temp.begin(), temp.end(), '\n'), temp.end());
-			//std::cout << temp.compare("LIST") << std::endl;
-			//if(strcmp(buf, "LIST"))
-      char * tok = strtok(buf, " ");
-			//std::cout << "tok is " << tok << " and temp is " << temp << std::endl;
+            char * tok = strtok(buf, " ");
 			if(strcmp(tok, "CDIR") == 0)
 			{
 				//scrub first 5 characters, i.e. "CDIR "
@@ -129,27 +125,27 @@ int main(int argc, char * argv[])
 					exit(1);
 				}
 			}
-      else if (strcmp(tok, "DELF") == 0){
-                std::cout<<"\n";
-                deleteFile(new_s, temp);
+            else if (strcmp(tok, "DELF") == 0){
+                    std::cout<<"\n";
+                    deleteFile(new_s, temp);
 
-      }
-      else if (strcmp(tok, "MDIR") == 0){
-          std::cout<<"\n";
-          makeDir(new_s, temp);
-      }
-	else if(strcmp(tok, "DWLD") == 0)
-	{
-		dwld(new_s, temp);	
-	}
-      else if (strcmp(tok, "UPLD") == 0)
-      {
-          upld(new_s, temp);
-      }	
-      else if (strcmp(tok, "RDIR") == 0)
-      {
-          rdir(new_s, temp);
-      }
+            }
+            else if (strcmp(tok, "MDIR") == 0){
+                std::cout<<"\n";
+                makeDir(new_s, temp);
+            }
+            else if(strcmp(tok, "DWLD") == 0)
+            {
+                dwld(new_s, temp);	
+            }
+            else if (strcmp(tok, "UPLD") == 0)
+            {
+                upld(new_s, temp);
+            }	
+            else if (strcmp(tok, "RDIR") == 0)
+            {
+                rdir(new_s, temp);
+            }
 
             bzero((char *)&buf, sizeof(buf));
 		}
@@ -158,7 +154,7 @@ int main(int argc, char * argv[])
     }
 }
 
-
+//list directory function
 std::string dir_list()
 {
 	DIR *dir;
@@ -177,8 +173,6 @@ std::string dir_list()
 			response += " ";
 			response += ent->d_name;
 			response += "\n";			
-			//std::cout << permissions << " ";
-			//std::cout << ent->d_name << std::endl;
 		}
 		closedir(dir);
 	}
@@ -186,7 +180,6 @@ std::string dir_list()
 	{
 		perror("");
 	}
-	//std::cout << response;
 	return response;
 }
 
@@ -217,7 +210,7 @@ std::string get_permissions(std::string file)
 	}		
 
 }
-
+//function that downloads a file
 void dwld(int s, std::string cmd)
 {    
 	std::stringstream ss;
@@ -233,7 +226,6 @@ void dwld(int s, std::string cmd)
 	std::ifstream file(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
 	
 	//check if the file exists and open it
-	//std::cout << "file name is >>" << fileName << "<<" << std::endl;
 	int fd = open(fileName.c_str(), O_RDONLY);
 	if(fd == -1 || !file.good())
 	{
@@ -300,7 +292,7 @@ void dwld(int s, std::string cmd)
 	file.close();
 
 }
-
+//function that deletes a file
 void deleteFile(int s, std::string buf){
     std::stringstream ss;
     ss << buf;
@@ -365,13 +357,6 @@ void deleteFile(int s, std::string buf){
             }
         }
 		closedir(dir);
-        /*char last[BUFSIZ] = "\0";
-        int lastLen = 1;
-        if (send(s, last, lastLen, 0) == -1){
-            perror("Server send error!\n");
-            exit(1);
-        }
-        std::cout<<"Truuuuuuu\n";*/
 	}
 	else
 	{
@@ -379,7 +364,7 @@ void deleteFile(int s, std::string buf){
 	}
 
 }
-
+//function that makes a directory
 void makeDir(int s, std::string buf){
     std::stringstream ss;
     ss << buf;
@@ -434,7 +419,7 @@ void makeDir(int s, std::string buf){
 		perror("error openning directory");
 	}
 }
-
+//function that uploads the files
 void upld(int s, std::string buf)
 {
     /* Set Strings */
@@ -540,7 +525,7 @@ void upld(int s, std::string buf)
         exit(1);
     }
 }
-
+//function that removes a directory
 void rdir(int s, std::string buf)
 {
     /* Set Strings */
